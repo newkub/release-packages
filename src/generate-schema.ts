@@ -1,21 +1,23 @@
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ReleasePackageSchema } from './types';
-import { writeFileSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { toJSONSchema } from './types';
 
-// Convert ReleasePackageSchema to JSON Schema
-const jsonSchema = zodToJsonSchema(ReleasePackageSchema, {
-  name: 'ReleasePackage',
-  target: 'jsonSchema7',
-});
+const jsonSchema = toJSONSchema('ReleasePackage');
 
-// Ensure proper structure for the schema
+// Extract properties and definitions from jsonSchema properly
+const { $schema, properties, definitions, ...restSchema } = jsonSchema as {
+  $schema?: string;
+  properties?: Record<string, unknown>;
+  definitions?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
 const finalSchema = {
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  ...jsonSchema,
+  $schema: $schema || 'http://json-schema.org/draft-07/schema#',
   type: 'object',
-  properties: (jsonSchema as any).properties || (jsonSchema as any).definitions?.ReleasePackage,
-  definitions: (jsonSchema as any).definitions
+  properties: properties || {},
+  definitions: definitions || {},
+  ...restSchema,
 };
 
 // Write schema to dist/schema.json file

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// PackageJson schema สำหรับ validation
 const PackageJsonSchema = z.object({
   name: z.string().min(1, 'Package name is required'),
   version: z.string().regex(
@@ -12,13 +11,10 @@ const PackageJsonSchema = z.object({
   devDependencies: z.record(z.string(), z.string()).optional(),
 });
 
-// Type ที่ได้จาก schema
 type PackageJson = z.infer<typeof PackageJsonSchema>;
 
-// Version type สำหรับ bump operation
 type VersionType = 'patch' | 'minor' | 'major';
 
-// NPM platform configuration
 const NpmPlatformSchema = z.object({
   publish: z.boolean().default(true),
   registry: z.string().url().optional(),
@@ -30,7 +26,6 @@ const NpmPlatformSchema = z.object({
   }).optional(),
 }).strict();
 
-// GitHub platform configuration
 const GithubPlatformSchema = z.object({
   publish: z.boolean().default(true),
   repository: z.string().min(1, 'Repository is required (format: owner/repo)'),
@@ -43,7 +38,6 @@ const GithubPlatformSchema = z.object({
   prerelease: z.boolean().default(false),
 }).strict();
 
-// Git configuration
 const GitConfigSchema = z.object({
   commitMessage: z.string().default(`chore: release \${version}`),
   tagPrefix: z.string().default('v'),
@@ -53,9 +47,8 @@ const GitConfigSchema = z.object({
   pushTags: z.boolean().default(true),
 }).strict();
 
-// ReleasePackage schema สำหรับการตั้งค่า release
 const ReleasePackageSchema = z.object({
-  $schema: z.string().optional(), // เพิ่ม $schema field สำหรับ JSON Schema reference
+  $schema: z.string().optional(),
   name: z.string().min(1, 'Package name is required'),
   version: z.string().regex(
     /^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9-]+))?(?:\+([a-zA-Z0-9-]+))?$/,
@@ -72,17 +65,92 @@ const ReleasePackageSchema = z.object({
     beforePublish: z.string().optional(),
     afterPublish: z.string().optional(),
   }).optional(),
-}); // ลบ .strict() เพื่อให้รองรับ $schema field
+});
 
-// Utility function สำหรับการสร้าง schema แบบ dynamic (ตัวอย่างการใช้งาน)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createPlatformSchema<T extends z.ZodRawShape>(
   _platformName: string,
   baseSchema: T
 ): z.ZodObject<T> {
-  // สามารถนำไปใช้สร้าง schema สำหรับ platform ใหม่ได้
-  // ตัวอย่าง: return z.object({ publish: z.boolean().default(true), ...baseSchema });
   return z.object(baseSchema);
+}
+
+function toJSONSchema(schemaName?: string) {
+  return {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    type: 'object',
+    properties: {
+      $schema: { type: 'string' },
+      name: { type: 'string', minLength: 1 },
+      version: {
+        type: 'string',
+        pattern: '^(\\d+)\\.(\\d+)\\.(\\d+)(?:-([a-zA-Z0-9-]+))?(?:\\+([a-zA-Z0-9-]+))?$'
+      },
+      platforms: {
+        type: 'object',
+        properties: {
+          npm: {
+            type: 'object',
+            properties: {
+              publish: { type: 'boolean', default: true },
+              registry: { type: 'string', format: 'uri' },
+              access: { type: 'string', enum: ['public', 'restricted'], default: 'public' },
+              tag: { type: 'string', default: 'latest' },
+              publishConfig: {
+                type: 'object',
+                properties: {
+                  access: { type: 'string', enum: ['public', 'restricted'] },
+                  registry: { type: 'string', format: 'uri' }
+                }
+              }
+            },
+            additionalProperties: false
+          },
+          github: {
+            type: 'object',
+            properties: {
+              publish: { type: 'boolean', default: true },
+              repository: { type: 'string', minLength: 1 },
+              branch: { type: 'string', default: 'main' },
+              createRelease: { type: 'boolean', default: true },
+              releaseName: { type: 'string', default: 'Release ${version}' },
+              generateNotes: { type: 'boolean', default: true },
+              assets: {
+                type: 'array',
+                items: { type: 'string' },
+                default: ['dist/**', 'package.json', 'README.md']
+              },
+              draft: { type: 'boolean', default: false },
+              prerelease: { type: 'boolean', default: false }
+            },
+            additionalProperties: false
+          }
+        }
+      },
+      git: {
+        type: 'object',
+        properties: {
+          commitMessage: { type: 'string', default: 'chore: release ${version}' },
+          tagPrefix: { type: 'string', default: 'v' },
+          requireCleanWorkingDirectory: { type: 'boolean', default: true },
+          requireUpToDate: { type: 'boolean', default: true },
+          push: { type: 'boolean', default: true },
+          pushTags: { type: 'boolean', default: true }
+        },
+        additionalProperties: false
+      },
+      hooks: {
+        type: 'object',
+        properties: {
+          beforeRelease: { type: 'string' },
+          afterRelease: { type: 'string' },
+          beforePublish: { type: 'string' },
+          afterPublish: { type: 'string' }
+        }
+      }
+    },
+    required: ['name'],
+    title: schemaName || 'ReleasePackage'
+  };
 }
 
 function validateReleasePackageConfig(config: unknown): ReleasePackage {
@@ -98,7 +166,6 @@ function validateReleasePackageConfig(config: unknown): ReleasePackage {
   return result.data;
 }
 
-// Utility function สำหรับการสร้าง default configuration
 function createDefaultReleasePackageConfig(name: string): ReleasePackage {
   return {
     name,
@@ -117,7 +184,7 @@ function createDefaultReleasePackageConfig(name: string): ReleasePackage {
         repository: "owner/repo",
         branch: "main",
         createRelease: true,
-        releaseName: `Release \${version}`,
+        releaseName: 'Release ${version}',
         generateNotes: true,
         assets: ["dist/**", "package.json", "README.md"],
         draft: false,
@@ -125,7 +192,7 @@ function createDefaultReleasePackageConfig(name: string): ReleasePackage {
       },
     },
     git: {
-      commitMessage: `chore: release \${version}`,
+      commitMessage: 'chore: release ${version}',
       tagPrefix: "v",
       requireCleanWorkingDirectory: true,
       requireUpToDate: true,
@@ -135,16 +202,15 @@ function createDefaultReleasePackageConfig(name: string): ReleasePackage {
   };
 }
 
-// Type ที่ได้จาก schema
 type ReleasePackage = z.infer<typeof ReleasePackageSchema>;
 
-// Exports - ทั้งหมดอยู่ด้านล่างนี้
 export {
   PackageJsonSchema,
   type PackageJson,
   type VersionType,
   ReleasePackageSchema,
   createPlatformSchema,
+  toJSONSchema,
   validateReleasePackageConfig,
   createDefaultReleasePackageConfig,
   type ReleasePackage,

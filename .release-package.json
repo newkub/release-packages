@@ -1,0 +1,25 @@
+{
+  "$schema": "./dist/schema.json",
+  "name": "release-packages",
+  "platforms": {
+    "npm": {
+      "publish": false,
+      "registry": "https://registry.npmjs.org/",
+      "access": "public",
+      "tag": "latest"
+    },
+    "github": {
+      "publish": false,
+      "repository": "owner/repo",
+      "branch": "main",
+      "createRelease": true,
+      "releaseName": "Release ${version}",
+      "generateNotes": true,
+      "assets": [
+        "dist/**",
+        "package.json",
+        "README.md"
+      ]
+    }
+  }
+}

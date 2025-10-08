@@ -1,0 +1,53 @@
+{
+  "name": "release-packages",
+  "version": "0.0.0",
+  "description": "A release script using clack prompts",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "bin": {
+    "release": "./dist/index.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsdown src/index.ts --out-dir dist --format esm",
+    "dev": "bun run src/index.ts",
+    "release": "bun run src/index.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "release",
+    "cli",
+    "automation",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "tsdown": "^0.15.6",
+    "typescript": "^5.9.3",
+    "@types/node": "^24.7.0"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0"
+  },
+  "release": {
+    "publish" : ["npm"],
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@release-it/conventional-changelog"
+    ]
+  }
+}
